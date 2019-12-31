@@ -13,10 +13,10 @@ else
     uname_S := $(shell uname -s)
 endif
 
-if ARCH_ARM
-PLATFORM_VARIANT = armv8.1-a+crypto
+ifeq ARCH_ARM
+	PLATFORM_VARIANT = armv8.1-a+crypto
 else
-PLATFORM_VARIANT = x86-64
+	PLATFORM_VARIANT = x86-64
 endif
 
 # To override these, use "make OPTFLAGS=..." etc.
