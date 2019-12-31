@@ -12,6 +12,7 @@ ifeq ($(OS),Windows_NT)
 else
     uname_S := $(shell uname -s)
 endif
+
 if ARCH_ARM
 PLATFORM_VARIANT = armv8.1-a+crypto
 else
