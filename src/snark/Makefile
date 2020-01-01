@@ -13,7 +13,7 @@ else
     uname_S := $(shell uname -s)
 endif
 
-ifeq ARCH_ARM
+ifdef ARCH_ARM
 	PLATFORM_VARIANT = armv8.1-a+crypto
 else
 	PLATFORM_VARIANT = x86-64
