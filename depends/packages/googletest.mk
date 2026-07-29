@@ -8,13 +8,9 @@ $(package)_sha256_hash=58a6f4277ca2bc8565222b3bbd58a177609e9c488e8a72649359ba514
 define $(package)_set_vars
 $(package)_cxxflags+=-std=c++17
 $(package)_cxxflags_linux=-fPIC
+$(package)_cxxflags_darwin=-mmacosx-version-min=$(OSX_MIN_VERSION)
+$(package)_build_env=AR="$($(package)_ar)" RANLIB="$($(package)_ranlib)" CC="$($(package)_cc)" CXX="$($(package)_cxx)" CXXFLAGS="$$($(package)_cxxflags)"
 endef
-
-ifeq ($(build_os),darwin)
-define $(package)_set_vars
-    $(package)_build_env=AR="$($(package)_ar)" RANLIB="$($(package)_ranlib)" CC="$($(package)_cc)" CXX="$($(package)_cxx)" CXXFLAGS="$($(package)_cxxflags)"
-endef
-endif
 
 ifeq ($(build_os),darwin)
 $(package)_install=ginstall
