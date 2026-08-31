@@ -1378,7 +1378,11 @@ void komodo_configfile(char *symbol, uint16_t rpcport)
                 // add basic chain parameters for non-VRSC chains
                 if (!_IsVerusMainnetActive())
                 {
-                    const char *charPtr;
+                    auto argOrDefault = [](const std::string &argName, const std::string &defaultValue)
+                    {
+                        std::string argValue = GetArg(argName, defaultValue);
+                        return argValue.empty() ? defaultValue : argValue;
+                    };
                     // basic coin parameters. the rest will come from block 1
                     fprintf(fp,"ac_algo=verushash\nac_veruspos=50\nac_cc=1\n");
                     fprintf(fp,"launchsystemid=%s\n", EncodeDestination(CIdentityID(ConnectedChains.thisChain.launchSystemID)).c_str());
@@ -1386,16 +1390,16 @@ void komodo_configfile(char *symbol, uint16_t rpcport)
                     fprintf(fp,"systemid=%s\n", EncodeDestination(CIdentityID(ConnectedChains.thisChain.systemID)).c_str());
                     fprintf(fp,"startblock=%d\n", ConnectedChains.thisChain.startBlock);
                     fprintf(fp,"endblock=%d\n", ConnectedChains.thisChain.endBlock);
-                    fprintf(fp,"gatewayconverterissuance=%s\n", (charPtr = mapArgs["-gatewayconverterissuance"].c_str())[0] == 0 ? "0" : charPtr);
-                    fprintf(fp,"ac_supply=%s\n", (charPtr = mapArgs["-ac_supply"].c_str())[0] == 0 ? "0" : charPtr);
-                    fprintf(fp,"ac_halving=%s\n", (charPtr = mapArgs["-ac_halving"].c_str())[0] == 0 ? "0" : charPtr);
-                    fprintf(fp,"ac_decay=%s\n", (charPtr = mapArgs["-ac_decay"].c_str())[0] == 0 ? "0" : charPtr);
-                    fprintf(fp,"ac_reward=%s\n", (charPtr = mapArgs["-ac_reward"].c_str())[0] == 0 ? "0" : charPtr);
-                    fprintf(fp,"ac_eras=%s\n", (charPtr = mapArgs["-ac_eras"].c_str())[0] == 0 ? "1" : charPtr);
-                    fprintf(fp,"ac_end=%s\n", (charPtr = mapArgs["-ac_end"].c_str())[0] == 0 ? "0" : charPtr);
-                    fprintf(fp,"ac_options=%s\n", (charPtr = mapArgs["-ac_options"].c_str())[0] == 0 ? "0" : charPtr);
+                    fprintf(fp,"gatewayconverterissuance=%s\n", argOrDefault("-gatewayconverterissuance", "0").c_str());
+                    fprintf(fp,"ac_supply=%s\n", argOrDefault("-ac_supply", "0").c_str());
+                    fprintf(fp,"ac_halving=%s\n", argOrDefault("-ac_halving", "0").c_str());
+                    fprintf(fp,"ac_decay=%s\n", argOrDefault("-ac_decay", "0").c_str());
+                    fprintf(fp,"ac_reward=%s\n", argOrDefault("-ac_reward", "0").c_str());
+                    fprintf(fp,"ac_eras=%s\n", argOrDefault("-ac_eras", "1").c_str());
+                    fprintf(fp,"ac_end=%s\n", argOrDefault("-ac_end", "0").c_str());
+                    fprintf(fp,"ac_options=%s\n", argOrDefault("-ac_options", "0").c_str());
 
-                    if (!mapArgs["-blocktime"].empty() || !mapArgs["-powaveragingwindow"].empty() || !mapArgs["-notarizationperiod"].empty())
+                    if (!GetArg("-blocktime", "").empty() || !GetArg("-powaveragingwindow", "").empty() || !GetArg("-notarizationperiod", "").empty())
                     {
                         int paramBlockTime = GetArg("-blocktime", CCurrencyDefinition::DEFAULT_BLOCKTIME_TARGET);
                         int powAveragingWindow = GetArg("-powaveragingwindow", CCurrencyDefinition::DEFAULT_AVERAGING_WINDOW);
@@ -1414,17 +1418,12 @@ void komodo_configfile(char *symbol, uint16_t rpcport)
 
                     if (GetArg("-port", 0))
                     {
-                        fprintf(fp,"port=%s\n", mapArgs["-port"].c_str());
+                        fprintf(fp,"port=%s\n", GetArg("-port", "").c_str());
                     }
 
-                    auto nodeIt = mapMultiArgs.find("-seednode");
-                    if (nodeIt != mapMultiArgs.end())
+                    for (auto nodeStr : GetArgs("-seednode"))
                     {
-                        std::vector<std::string> &nodeStrs = mapMultiArgs["-seednode"];
-                        for (auto nodeStr : nodeStrs)
-                        {
-                            fprintf(fp,"seednode=%s\n", nodeStr.c_str());
-                        }
+                        fprintf(fp,"seednode=%s\n", nodeStr.c_str());
                     }
                 }
                 fclose(fp);
@@ -1435,8 +1434,8 @@ void komodo_configfile(char *symbol, uint16_t rpcport)
         else
         {
             _komodo_userpass(myusername, mypassword, fp);
-            mapArgs["-rpcpassword"] = mypassword;
-            mapArgs["-rpcusername"] = myusername;
+            OverrideSetArg("-rpcpassword", mypassword);
+            OverrideSetArg("-rpcusername", myusername);
             //fprintf(stderr,"myusername.(%s)\n",myusername);
             fclose(fp);
         }
@@ -1737,7 +1736,7 @@ void komodo_args(char *argv0)
         name = "VRSC";
     }
 
-    mapArgs["-ac_name"] = name;
+    OverrideSetArg("-ac_name", name);
     memset(ASSETCHAINS_SYMBOL, 0, sizeof(ASSETCHAINS_SYMBOL));
     strcpy(ASSETCHAINS_SYMBOL, name.c_str());
 
@@ -1749,9 +1748,9 @@ void komodo_args(char *argv0)
 
     CCurrencyDefinition mainVerusCurrency;
 
-    mapArgs["-ac_algo"] = "verushash";
-    mapArgs["-ac_cc"] = "1";
-    mapArgs["-ac_veruspos"] = "50";
+    OverrideSetArg("-ac_algo", "verushash");
+    OverrideSetArg("-ac_cc", "1");
+    OverrideSetArg("-ac_veruspos", "50");
 
     VERUS_CHAINNAME = PBAAS_TESTMODE ? "VRSCTEST" : "VRSC";
     VERUS_CHAINID = CCrossChainRPCData::GetID(VERUS_CHAINNAME);
@@ -1771,12 +1770,12 @@ void komodo_args(char *argv0)
 
         auto numEras = mainVerusCurrency.rewards.size();
         ASSETCHAINS_LASTERA = numEras - 1;
-        mapArgs["-ac_eras"] = to_string(numEras);
+        OverrideSetArg("-ac_eras", to_string(numEras));
 
         if (PBAAS_TESTMODE)
         {
             uint32_t defaultHalving = mainVerusCurrency.halving[0];
-            std::string halving = GetArg("-ac_halving", mapArgs.count("-ac_halving") ? mapArgs["-ac_halving"] : std::to_string(defaultHalving)); // this assignment is required for an ARM compiler workaround
+            std::string halving = GetArg("-ac_halving", std::to_string(defaultHalving)); // this assignment is required for an ARM compiler workaround
             mainVerusCurrency.halving[0] = atoi(halving);
         }
 
@@ -1799,38 +1798,38 @@ void komodo_args(char *argv0)
                 ASSETCHAINS_ERAOPTIONS[j] = mainVerusCurrency.options;
                 if (j == 0)
                 {
-                    mapArgs["-ac_reward"] = to_string(ASSETCHAINS_REWARD[j]);
-                    mapArgs["-ac_decay"] = to_string(ASSETCHAINS_DECAY[j]);
-                    mapArgs["-ac_halving"] = to_string(ASSETCHAINS_HALVING[j]);
-                    mapArgs["-ac_end"] = to_string(ASSETCHAINS_ENDSUBSIDY[j]);
-                    mapArgs["-ac_options"] = to_string(ASSETCHAINS_ERAOPTIONS[j]);
+                    OverrideSetArg("-ac_reward", to_string(ASSETCHAINS_REWARD[j]));
+                    OverrideSetArg("-ac_decay", to_string(ASSETCHAINS_DECAY[j]));
+                    OverrideSetArg("-ac_halving", to_string(ASSETCHAINS_HALVING[j]));
+                    OverrideSetArg("-ac_end", to_string(ASSETCHAINS_ENDSUBSIDY[j]));
+                    OverrideSetArg("-ac_options", to_string(ASSETCHAINS_ERAOPTIONS[j]));
                 }
                 else
                 {
-                    mapArgs["-ac_reward"] += "," + to_string(ASSETCHAINS_REWARD[j]);
-                    mapArgs["-ac_decay"] += "," + to_string(ASSETCHAINS_DECAY[j]);
-                    mapArgs["-ac_halving"] += "," + to_string(ASSETCHAINS_HALVING[j]);
-                    mapArgs["-ac_end"] += "," + to_string(ASSETCHAINS_ENDSUBSIDY[j]);
-                    mapArgs["-ac_options"] += "," + to_string(ASSETCHAINS_ERAOPTIONS[j]);
+                    OverrideSetArg("-ac_reward", GetArg("-ac_reward", "") + "," + to_string(ASSETCHAINS_REWARD[j]));
+                    OverrideSetArg("-ac_decay", GetArg("-ac_decay", "") + "," + to_string(ASSETCHAINS_DECAY[j]));
+                    OverrideSetArg("-ac_halving", GetArg("-ac_halving", "") + "," + to_string(ASSETCHAINS_HALVING[j]));
+                    OverrideSetArg("-ac_end", GetArg("-ac_end", "") + "," + to_string(ASSETCHAINS_ENDSUBSIDY[j]));
+                    OverrideSetArg("-ac_options", GetArg("-ac_options", "") + "," + to_string(ASSETCHAINS_ERAOPTIONS[j]));
                 }
             }
         }
 
         PBAAS_STARTBLOCK = mainVerusCurrency.startBlock;
-        mapArgs["-startblock"] = to_string(PBAAS_STARTBLOCK);
+        OverrideSetArg("-startblock", to_string(PBAAS_STARTBLOCK));
         PBAAS_ENDBLOCK = mainVerusCurrency.endBlock;
-        mapArgs["-endblock"] = to_string(PBAAS_ENDBLOCK);
+        OverrideSetArg("-endblock", to_string(PBAAS_ENDBLOCK));
 
         ASSETCHAINS_SUPPLY = mainVerusCurrency.GetTotalPreallocation();
         ASSETCHAINS_ISSUANCE = mainVerusCurrency.gatewayConverterIssuance;
-        mapArgs["-ac_supply"] = to_string(ASSETCHAINS_SUPPLY);
-        mapArgs["-gatewayconverterissuance"] = to_string(ASSETCHAINS_ISSUANCE);
+        OverrideSetArg("-ac_supply", to_string(ASSETCHAINS_SUPPLY));
+        OverrideSetArg("-gatewayconverterissuance", to_string(ASSETCHAINS_ISSUANCE));
 
         if (name == "VRSC")
         {
-            mapArgs["-ac_timelockgte"] = "19200000000";
-            mapArgs["-ac_timeunlockfrom"] = "129600";
-            mapArgs["-ac_timeunlockto"] = "1180800";
+            OverrideSetArg("-ac_timelockgte", "19200000000");
+            OverrideSetArg("-ac_timeunlockfrom", "129600");
+            OverrideSetArg("-ac_timeunlockto", "1180800");
 
             ASSETCHAINS_TIMELOCKGTE = 19200000000;
             ASSETCHAINS_TIMEUNLOCKFROM = 129600;
@@ -1886,8 +1885,8 @@ void komodo_args(char *argv0)
                     ASSETCHAINS_ERAOPTIONS[0] = thisCurrency.options;
                     ASSETCHAINS_SUPPLY = thisCurrency.GetTotalPreallocation();
                     ASSETCHAINS_ISSUANCE = thisCurrency.gatewayConverterIssuance;
-                    mapArgs["-ac_supply"] = to_string(ASSETCHAINS_SUPPLY);
-                    mapArgs["-gatewayconverterissuance"] = to_string(ASSETCHAINS_ISSUANCE);
+                    OverrideSetArg("-ac_supply", to_string(ASSETCHAINS_SUPPLY));
+                    OverrideSetArg("-gatewayconverterissuance", to_string(ASSETCHAINS_ISSUANCE));
                     PARAMS_LOADED = true;
                 }
                 catch(const std::exception& e)
@@ -2194,10 +2193,10 @@ void komodo_args(char *argv0)
 
             std::vector<std::string> addn;
             UniValue nodeArr(UniValue::VARR);
-            std::map<std::string, std::vector<std::string>>::iterator seedIt = mapMultiArgs.find("-seednode");
-            if (seedIt != mapMultiArgs.end())
+            std::vector<std::string> seedNodeArgs = GetArgs("-seednode");
+            if (!seedNodeArgs.empty())
             {
-                for (auto oneSeedStr : seedIt->second)
+                for (auto oneSeedStr : seedNodeArgs)
                 {
                     nodeArr.push_back(CNodeData(oneSeedStr, "").ToUniValue());
                 }

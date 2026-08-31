@@ -6533,7 +6533,7 @@ bool CConnectedChains::CheckVerusPBaaSAvailable()
                         UniValue miningDistributionUni = find_value(RPCCallRoot("getminingdistribution", params), "result");
                         if (miningDistributionUni.isObject() && miningDistributionUni.size())
                         {
-                            mapArgs["-miningdistribution"] = miningDistributionUni.write();
+                            OverrideSetArg("-miningdistribution", miningDistributionUni.write());
                         }
                     }
 
